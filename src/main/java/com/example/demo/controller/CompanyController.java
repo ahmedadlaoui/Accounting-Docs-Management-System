@@ -6,6 +6,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -20,6 +21,7 @@ public class CompanyController {
     private final CompanyService companyService;
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('COMPTABLE', 'SOCIETE')")
     public ResponseEntity<Map<String, Object>> getAllCompanies() {
         List<CompanyDTO> companies = companyService.getAllCompanies();
         Map<String, Object> response = new HashMap<>();
@@ -30,6 +32,7 @@ public class CompanyController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('COMPTABLE', 'SOCIETE')")
     public ResponseEntity<Map<String, Object>> getCompanyById(@PathVariable Long id) {
         CompanyDTO company = companyService.getCompanyById(id);
         Map<String, Object> response = new HashMap<>();
@@ -40,6 +43,7 @@ public class CompanyController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('COMPTABLE')")
     public ResponseEntity<Map<String, Object>> createCompany(@Valid @RequestBody CompanyDTO companyDTO) {
         CompanyDTO createdCompany = companyService.createCompany(companyDTO);
         Map<String, Object> response = new HashMap<>();
@@ -50,6 +54,7 @@ public class CompanyController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('COMPTABLE')")
     public ResponseEntity<Map<String, Object>> updateCompany(@PathVariable Long id,
             @Valid @RequestBody CompanyDTO companyDTO) {
         CompanyDTO updatedCompany = companyService.updateCompany(id, companyDTO);
@@ -61,6 +66,7 @@ public class CompanyController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('COMPTABLE')")
     public ResponseEntity<Map<String, Object>> deleteCompany(@PathVariable Long id) {
         companyService.deleteCompany(id);
         Map<String, Object> response = new HashMap<>();

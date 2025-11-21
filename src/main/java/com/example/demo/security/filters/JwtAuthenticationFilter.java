@@ -1,5 +1,7 @@
-package com.example.demo.security;
+package com.example.demo.security.filters;
 
+import com.example.demo.security.CustomUserDetailsService;
+import com.example.demo.security.JwtUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -8,6 +10,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
+import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -28,24 +31,29 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final CustomUserDetailsService userDetailsService;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+    protected void doFilterInternal(@NonNull HttpServletRequest request,
+            @NonNull HttpServletResponse response,
+            @NonNull FilterChain filterChain)
             throws ServletException, IOException {
 
         try {
             String authHeader = request.getHeader("Authorization");
-            String token = null;
-            String email = null;
 
-            if (authHeader != null && authHeader.startsWith("Bearer ")) {
-                token = authHeader.substring(7);
-                try {
-                    email = jwtUtil.extractEmail(token);
-                } catch (Exception e) {
-                    log.error("Invalid JWT token: {}", e.getMessage());
-                    sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED,
-                            "Invalid or expired JWT token", e.getMessage());
-                    return;
-                }
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                filterChain.doFilter(request, response);
+                return;
+            }
+
+            String token = authHeader.substring(7);
+            String email;
+
+            try {
+                email = jwtUtil.extractEmail(token);
+            } catch (Exception e) {
+                log.error("Invalid JWT token: {}", e.getMessage());
+                sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED,
+                        "Invalid or expired JWT token", e.getMessage());
+                return;
             }
 
             if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
@@ -57,6 +65,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                 userDetails, null, userDetails.getAuthorities());
                         authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                         SecurityContextHolder.getContext().setAuthentication(authToken);
+
+                        log.debug("User {} successfully authenticated via JWT", email);
                     } else {
                         log.error("JWT token validation failed for user: {}", email);
                         sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED,
